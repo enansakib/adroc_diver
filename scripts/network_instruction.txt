@@ -1,0 +1,14 @@
+## all classifier
+embedding:
+load_model(emb_model, 'metric_model_newdata_all_16300_0.9764.pth', 'cuda')
+classifier:
+somewhere between 600-800 epoch weights
+metric_model_newdata_cls_700_95.8914.pth
+
+## diver classifier
+embedding:
+### load_model(emb_model, 'metric_model_newdata_diver_16200_0.9760.pth', 'cuda')
+classifier:
+somewhere between 200-500 epoch weights
+
+metric_model_newdata_diveronly_cls_200_97.3945.pth

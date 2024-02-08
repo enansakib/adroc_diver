@@ -1,0 +1,5 @@
+<launch>
+    <arg name="name" default="default"/>
+    <node pkg="rosbag" type="record" name="record_trash" output="screen"
+        args="-o /data/trash_$(arg name) /loco_cams/right/image_raw /yolact_ros/detections /yolact_ros/visualization"/>
+</launch>

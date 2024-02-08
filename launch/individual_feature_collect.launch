@@ -1,0 +1,4 @@
+<launch>
+    <node name='adroc_diver' pkg='adroc_diver' type='individual_feature_collect_diverID.py' output='screen'> 
+    </node>
+</launch>

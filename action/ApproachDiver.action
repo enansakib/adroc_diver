@@ -1,0 +1,10 @@
+# Goal
+uint32 diver_id
+---
+# Result
+bool success
+adroc_diver/DiverRelativePosition final_relative_position
+---
+# Feedback
+string adroc_state_name
+uint32 adroc_state_id

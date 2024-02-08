@@ -1,0 +1,192 @@
+Plan A and B:
+==============
+## We need total 7 terminals from tilix
+
+#1: Katla
+## setup virtual env
+source ~/venvs/pose/bin/activate
+## source ros things...
+cd ~/diver_id_ws2
+source devel/setup.bash
+## run it
+move to ~/diver_id_ws2/src/diver_joint/scripts/DEKR
+then run : ./infer_ros.sh
+### not this: rosrun diver_joint joint_ratio_analyzer.py
+
+FOR TX2, don't need venvs
+
+#2: tx2
+(optional) if we are running on bench
+rosservice call /mavros/cmd/arming "value: false"
+
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver drp_only.launch
+
+#3: tx2
+don't need source for this..
+roslaunch target_following reconfigure_drp_yaw_pitch_controller.launch
+
+#4: tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver aoc_only_planA.launch  ## aoc_only_planB.launch
+
+(())
+
+#5: tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver data_record_test.launch my_args:="planX_caseY"
+
+
+#6: tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+
+## below should be autocomplted if you tap after rostopic pub /adroc_diver/goal
+
+rostopic pub /adroc_diver/goal adroc_diver/ApproachDiverActionGoal "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: ''
+  diver_id: 0" 
+
+#7: Katla
+rqt
+/drp/drp_image for PD view
+/detection/output_image for pose detection
+
+plan C::
+========
+we need 4 terminals
+
+#1: Katla
+## setup virtual env
+source ~/venvs/pose/bin/activate
+## source ros things...
+cd ~/diver_id_ws2
+source devel/setup.bash
+## run it
+move to ~/diver_id_ws2/src/diver_joint/scripts/DEKR
+then run : ./infer_ros.sh
+
+#2: tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver drp_only.launch
+
+#3 tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+rosrun adroc_diver individual_feature_collect_diverID.py
+
+#4 tx2
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver data_record_test.launch my_args:="planC_collect"
+
+Training Step::
+Change the DIVERS_NUM variable to reflect the number of divers
+
+cd adroc_diver_id_ws/src/adroc_diver/scripts
+python3 OfflineModelTraining.py
+
+inference Step::
+do everything in as plan AB but run planC launch file
+
+** change the TARGET_DIVER variable to set target.
+
+cd adroc_diver_id_ws/
+source devel/setup.bash
+roslaunch adroc_diver aoc_only_planC.launch
+
+
+
+####### When robot pitch is flipped:
+
+go to /home/irvlab/catkin_ws/src/target_following/scripts/drp_yaw_pitch_controller_reconf.py
+
+## also you can slow down the robot by dividing ss, yy, pp with some numbers...
+## tuning efforts needed for this, TUNE
+
+    def set_vyprh_cmd(self, ss, yy, pp, rr, hh):
+        self.cmd_msg.throttle = ss+0 # 0.2
+        self.cmd_msg.yaw = yy
+        self.cmd_msg.pitch = pp  <---- change this to -pp
+        #self.cmd_msg.roll = rr
+        #self.cmd_msg.heave = hh
+
+## this is to decide the image set point. this is for actual control of the robot
+
+    def compute_errors_from_estimate(self): 
+        tx, ty, pd = self.current_observation
+
+        #Our image target point is centered horizontally, and 1/3 of the way down vertically.
+        image_setpoint_x = self.image_w/2.0 
+        image_setpoint_y = self.image_h/2.0 #########
+
+## you also need to update this equally in the autonomous_operator_configuration_deploy_online.py
+    def drp_stable(self):
+        if len(self.drp_msgs) >0:
+            x_errs = list()
+            y_errs = list()
+            pd_errs = list()
+
+            image_setpoint_x = self.drp_msgs[0].image_w/2.0
+            # image_setpoint_y = self.drp_msgs[0].image_h/2.0 #########
+            image_setpoint_y = self.drp_msgs[0].image_h/2.0 #########
+
+
+####### When robot needs to :
+## if pd > 1 --> robot will back up; if pd < 1 --> robot will come close.
+## in diver_relative_postion_deploy.py
+        self.bbox_target_ratio = 0.17*1.5 ###### 0.7 for non-square , 0.7 ** 2.3 (2.5 square) worked
+        self.shoulder_target_ratio= 0.17 ########
+## (if above doesn't work) To change "pd" shoulder_to_target_ratio in adroc_diver/cfg/DRP_Params.cfg need to be changed. 
+## If shoulder_to_target_ratio is increased, then pd would low, so robot comes closer.
+## If shoulder_to_target_ratio is decreased, then pd would high, so robot goes backward.
+
+
+## if you want to change the drp_target for pose
+go to diver_relative_postion_deploy.py
+    def pose_to_drp(self):
+        cp_x, cp_y, pd = None, None, None
+
+        rx, ry = self.rs_observation
+        lx, ly = self.ls_observation
+        rhx, rhy = self.rh_observation
+        lhx, lhy = self.lh_observation
+
+        ## TODO: change the center point here.. not using shoulders. using something else.
+        cp_x = int((lx+rx+lhx+rhx)/4)
+        cp_y = int((ly+ry+lhy+rhy)/4)
+
+
+## check storage and remove
+    rosclean check
+    rosclean purge
+
+
+## TODO:
+    plan A: 
+
+
+## rosbag record test
+
+roslaunch data_record_test.launch my_args:="planA_case1"
+https://answers.ros.org/question/303339/adding-arguments-via-command-line-during-roslaunch/
+https://answers.ros.org/question/277622/roslaunch-command-line-args/
+
+--------------------ignore below
+self.lf_cmd = "roslaunch /home/irvlab/catkin_ws/src/adroc_diver/launch/data_record.launch"
+self.dg_name = "/data/adroc_diver_digest.txt"
+
+
+
+
+
+  
+rosbag record 

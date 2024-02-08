@@ -1,0 +1,6 @@
+<launch>
+    <node name='drp' pkg='adroc_diver' type='diver_relative_position_deploy.py' output='screen'> 
+        <param name='visualize' value='True'/>
+        <param name='base_image_topic' value='/loco_cams/right/image_raw'/>
+    </node>
+</launch>

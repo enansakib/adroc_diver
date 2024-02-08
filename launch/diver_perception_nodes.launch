@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find darknet_ros)/launch/diver_v4t.launch"/>
+    <node name="trt_pose_script" pkg="trt_pose_pkg" type="run_trt_loco.sh"/>
+</launch>
